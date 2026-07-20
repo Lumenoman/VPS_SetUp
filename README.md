@@ -14,7 +14,9 @@ chmod +x /usr/local/bin/VPS_SetUp/VPS_SetUp.sh
 И сохраняет параметры в /usr/local/bin/VPS_SetUp/server_env.txt
 
 Или можно установить скрипт командой:
+```bash
 curl -fsSL https://raw.githubusercontent.com/Lumenoman/VPS_SetUp/main/install.sh | bash
+```
 
 Возможности.
 Запись логов ведется в файл setup.log
