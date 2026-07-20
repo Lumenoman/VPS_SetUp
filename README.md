@@ -13,6 +13,9 @@ chmod +x /usr/local/bin/VPS_SetUp/VPS_SetUp.sh
 Скрипт логирует всё в /usr/local/bin/VPS_SetUp/setup.log
 И сохраняет параметры в /usr/local/bin/VPS_SetUp/server_env.txt
 
+Или можно установить скрипт командой:
+curl -fsSL https://raw.githubusercontent.com/Lumenoman/VPS_SetUp/main/install.sh | bash
+
 Возможности.
 Запись логов ведется в файл setup.log
 Сбор важных для администрирования параметров сервера и запись их в файл server_env.txt
