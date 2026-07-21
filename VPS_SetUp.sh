@@ -588,7 +588,10 @@ local SSH_PORT
 local F2B_PORT
 local UFW_RULE
 # Get real SSH port
-SSH_PORT=$(sshd -T | awk '/^port / {print $2; exit}')
+if ! SSH_PORT=$(sshd -T | grep '^port ' | awk '{print $2}'); then
+add_failed "Не удалось определить порт SSH"
+return
+fi
 # Get real Fail2Ban port for jail sshd
 F2B_PORT=$(fail2ban-client get sshd port 2>/dev/null || true)
 # Chek UFW port
