@@ -16,6 +16,7 @@ chmod +x /usr/local/bin/VPS_SetUp/VPS_SetUp.sh
 ```bash
 curl -fsSL https://raw.githubusercontent.com/Lumenoman/VPS_SetUp/main/install.sh | bash
 ```
+Установить обновление можно повторно использовав команду установки.
 
 Возможности:
 Изменение пароля root на 32х символьный, включающий латинские буквы в разных регистрах, цифры и символы.
