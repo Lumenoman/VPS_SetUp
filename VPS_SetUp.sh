@@ -1,6 +1,6 @@
 #!/bin/bash
 # ========================================
-# Универсальный скрипт базовой настройки VPS v2.11.3.9
+# Универсальный скрипт базовой настройки VPS v2.12.3.9
 # Поддерживаемые ОС: Debian/Ubuntu
 # Авторы в порядке вклада: ChatGPT, Grok, DeepSeek, Lumenoman
 #
@@ -494,6 +494,14 @@ ufw status verbose >> "$ENV_FILE"
 fi
 }
 
+reset_ufw() {
+section "Сброс параметров UFW"
+if confirm "Сбросить текущую конфигурацию UFW?"; then
+ufw --force reset
+add_success "Конфигурация UFW сброшена"
+fi
+}
+
 configure_kernel() {
 section "Настройка ядра (BBR/sysctl)"
 if ! confirm "Оптимизировать параметры sysctl?"; then
@@ -629,6 +637,7 @@ declare -A ACTIONS=(
 [6]=configure_ssh_keys
 [7]=configure_fail2ban
 [8]=configure_ufw
+[8a]=reset_ufw
 [9]=configure_kernel
 [10]=configure_timezone
 [11]=configure_updates
@@ -654,6 +663,7 @@ echo "5b. Ужесточение параметров SSH"
 echo "6.  Установка SSH-ключей"
 echo "7.  Настройка Fail2Ban"
 echo "8.  Настройка UFW"
+echo "8a. Сброс текущих настроек UFW"
 echo "9.  Настройка ядра (BBR/sysctl)"
 echo "10. Установка часового пояса"
 echo "11. Активация автообновлений"
