@@ -1,6 +1,6 @@
 #!/bin/bash
 # ========================================
-# Универсальный скрипт базовой настройки VPS v2.9.3.4
+# Универсальный скрипт базовой настройки VPS v2.11.3.9
 # Поддерживаемые ОС: Debian/Ubuntu
 # Авторы в порядке вклада: ChatGPT, Grok, DeepSeek, Lumenoman
 #
@@ -130,6 +130,9 @@ echo "$1" >> "$ENV_FILE"
 
 # Set new ports
 read_ports() {
+if ! confirm "Произвести смену порта SSH?"; then
+return
+fi
 echo "Задаем новый порт для SSH..."
 read -rp "Введите новый SSH порт (49152-65535) или Enter для случайного: " NPORT
 if [[ -z "$NPORT" ]]; then
@@ -143,6 +146,10 @@ read -rp "Введите другой порт (или Enter для случай
 [[ -z "$NPORT" ]] && NPORT=$(shuf -i 49152-65535 -n 1)
 done
 add_success "Новый SSH порт $NPORT задан успешно"
+add_warning "Требуется обязательная настройка UFW!"
+if ! confirm "Задать дополнительный порт XPort для будщих сервисов?"; then
+return
+fi
 echo "Задаем дополнительный порт XPort для будщих сервисов..."
 read -rp "Введите XPort, или нажмите Enter для 2442: " XPORT
 XPORT=${XPORT_INPUT:-2442}
@@ -155,8 +162,10 @@ read -rp "Введите другой XPort (или Enter для 2442): " XPORT
 XPORT=${XPORT:-2442}
 done
 add_success "XPort $XPORT задан успешно"
+add_warning "Требуется обязательная настройка UFW!"
 save_env "New SSH port: $NPORT"
 save_env "Addons port: $XPORT"
+save_env "Требуется обязательная настройка UFW!"
 }
 
 # Make server_env
@@ -194,6 +203,8 @@ reboot_server() {
 if confirm "Перезагрузить сервер?"; then
 echo "Перезагрузка..."
 reboot
+clear
+pause
 else
 echo "Отмена"
 return
@@ -334,14 +345,8 @@ fi
 
 configure_ssh() {
 section "Смена порта SSH"
-if ! confirm "Произвести смену порта SSH?"; then
-return
-fi
-echo "Требуется задать порты..."
-echo "Отладка: Перенаправление на read_ports" #Отладка
-pause
 read_ports
-echo "✓ Порты заданы"
+echo "✓ Процедура выбора портов пройдена"
 echo "Резервное копирование текущих настроек SSH..."
 cp /etc/ssh/sshd_config /etc/ssh/sshd_config.bak
 mkdir -p /etc/ssh/sshd_config.d
@@ -371,8 +376,6 @@ else
 add_failed "SSH не слушает новый порт!"
 return
 fi
-echo "Отладка: Перенаправление на harden_ssh" #Отладка
-pause
 harden_ssh
 save_env "New SSH port $NPORT successfully activated"
 echo
@@ -387,6 +390,7 @@ section "Создание ключей SSH"
 if ! confirm "Включить вход по ключу?"; then
 return
 fi
+if [[ -n "${NPORT:-}" ]]; then
 echo "Задаем имя ключа..."
 read -rp "Имя ключа [id_ed25519]: " KEYNAME
 KEYNAME=${KEYNAME:-id_ed25519}
@@ -408,6 +412,11 @@ echo "Новая команда подключения:"
 echo "ssh -p ${NPORT} -i ~/.ssh/${KEYNAME} root@${IP}"
 echo
 echo "Можно скопировать ее и сохранить..."
+else
+echo "Сначало необходимо задать порты"
+add_warning "NPORT не задан"
+pause
+fi
 }
 
 configure_fail2ban() {
@@ -415,6 +424,7 @@ section "Активация защиты от брутфорса"
 if ! confirm "Включить Fail2Ban?"; then
 return
 fi
+if [[ -n "${NPORT:-}" ]]; then
 echo "Запуск Fail2Ban..."
 systemctl enable --now fail2ban
 echo "Конфигурация Fail2Ban для порта ${NPORT}..."
@@ -436,6 +446,11 @@ save_env "Fail2Ban for port $NPORT successfully activated"
 else
 add_failed "Fail2Ban не запустился"
 fi
+else
+echo "Сначало необходимо задать порты"
+add_warning "NPORT не задан"
+pause
+fi
 }
 
 configure_ufw() {
@@ -444,8 +459,18 @@ if ! confirm "Включить UFW?"; then
 return
 fi
 echo "Настройка портов..."
+if [[ -n "${NPORT:-}" ]]; then
 ufw limit "${NPORT}/tcp"
+else
+echo "Сначало необходимо задать порты"
+add_warning "NPORT не задан. Правило UFW не добавлено"
+fi
+if [[ -n "${XPORT:-}" ]]; then
 ufw allow "${XPORT}/tcp"
+else
+echo "Сначало необходимо задать порты"
+add_warning "XPort не задан. Правило UFW не добавлено"
+fi
 ufw allow 80/tcp
 ufw allow 443/tcp
 ufw allow 443/udp
@@ -462,8 +487,10 @@ if ufw status | grep -q active
 then
 add_success "UFW успешно настроен и запущен"
 save_env "UFW successfully activated"
+ufw status verbose >> "$ENV_FILE"
 else
 add_failed "UFW не запущен"
+ufw status verbose >> "$ENV_FILE"
 fi
 }
 
@@ -522,7 +549,7 @@ section "Часовой пояс"
 if ! confirm "Настроить часовой пояс?"; then
 return
 fi
-read -rp "Введите часовой пояс: " TIMEZONE
+read -rp "Введите часовой пояс, например Europe/City: " TIMEZONE
 [[ -z "$TIMEZONE" ]] && return
 echo "Установка часового пояса..."
 timedatectl set-timezone "$TIMEZONE"
@@ -547,6 +574,34 @@ save_env "Unattended Upgrades not activ"
 fi
 }
 
+check_ssh_security() {
+section "Проверка конфигурации"
+local SSH_PORT
+local F2B_PORT
+local UFW_RULE
+# Get real SSH port
+SSH_PORT=$(sshd -T | awk '/^port / {print $2; exit}')
+# Get real Fail2Ban port for jail sshd
+F2B_PORT=$(fail2ban-client get sshd port 2>/dev/null || true)
+# Chek UFW port
+UFW_RULE=$(ufw status | grep -E "^${SSH_PORT}/tcp" || true)
+echo "SSH порт:       $SSH_PORT"
+echo "Fail2Ban порт:  $F2B_PORT"
+echo "UFW правило:    $UFW_RULE"
+if [[ "$SSH_PORT" == "$F2B_PORT" ]]; then
+add_success "Порт SSH и Fail2Ban совпадают"
+else
+add_failed "Порт SSH и Fail2Ban не совпадают"
+pause
+fi
+if [[ -n "$UFW_RULE" ]]; then
+add_success "SSH порт открыт в UFW"
+else
+add_failed "SSH порт не открыт в UFW"
+pause
+fi
+}
+
 # Full setup
 full_setup() {
 change_root_password
@@ -559,6 +614,7 @@ configure_ufw
 configure_kernel
 configure_timezone
 configure_updates
+check_ssh_security
 }
 
 # Main menu
@@ -568,14 +624,17 @@ declare -A ACTIONS=(
 [3]=update_system
 [4]=install_packages
 [5]=configure_ssh
+[5a]=read_ports
+[5b]=harden_ssh
 [6]=configure_ssh_keys
 [7]=configure_fail2ban
 [8]=configure_ufw
 [9]=configure_kernel
 [10]=configure_timezone
 [11]=configure_updates
-[12]=show_info
-[13]=reboot_server
+[12]=check_ssh_security
+[13]=show_info
+[14]=reboot_server
 )
 
 main_menu() {
@@ -590,14 +649,17 @@ echo "2.  Смена пароля root"
 echo "3.  Обновление системы"
 echo "4.  Установка часто используемых пакетов"
 echo "5.  Настройка параметров SSH"
+echo "5a. Задать порты"
+echo "5b. Ужесточение параметров SSH"
 echo "6.  Установка SSH-ключей"
 echo "7.  Настройка Fail2Ban"
 echo "8.  Настройка UFW"
 echo "9.  Настройка ядра (BBR/sysctl)"
 echo "10. Установка часового пояса"
 echo "11. Активация автообновлений"
-echo "12. Показать информацию о сервере"
-echo "13. Перезагрузить сервер"
+echo "12. Проверка конфигурации"
+echo "13. Показать информацию о сервере"
+echo "14. Перезагрузить сервер"
 echo
 echo "0. Выход"
 echo
