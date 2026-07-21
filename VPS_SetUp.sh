@@ -593,7 +593,13 @@ add_failed "Не удалось определить порт SSH"
 return
 fi
 # Get real Fail2Ban port for jail sshd
-F2B_PORT=$(fail2ban-client get sshd port 2>/dev/null || true)
+F2B_PORT=$(awk -F '=' '
+    /^[[:space:]]*port[[:space:]]*=/ {
+        gsub(/[[:space:]]/, "", $2)
+        print $2
+        exit
+    }
+' /etc/fail2ban/jail.local)
 # Chek UFW port
 UFW_RULE=$(ufw status | grep -E "^${SSH_PORT}/tcp" || true)
 echo "SSH порт:       $SSH_PORT"
