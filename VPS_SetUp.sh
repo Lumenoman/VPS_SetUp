@@ -540,6 +540,10 @@ configure_IPv6
 configure_IPv6() {
 section "Настройка IPv6"
 if confirm "Отключить IPv6?"; then
+sed -i \
+    '/^[[:space:]]*net\.ipv6\.conf\.all\.disable_ipv6[[:space:]]*=/d;
+     /^[[:space:]]*net\.ipv6\.conf\.default\.disable_ipv6[[:space:]]*=/d' \
+    /etc/sysctl.conf
 echo "net.ipv6.conf.all.disable_ipv6=1" >> /etc/sysctl.conf
 echo "net.ipv6.conf.default.disable_ipv6=1" >> /etc/sysctl.conf
 add_success "IPv6 отключен"
