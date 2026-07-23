@@ -534,7 +534,7 @@ fi
 done
 add_success "BBR включен"
 save_env "BBR activated"
-configure_IPv6
+#configure_IPv6
 }
 
 configure_IPv6() {
