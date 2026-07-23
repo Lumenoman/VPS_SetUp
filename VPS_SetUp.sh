@@ -1,6 +1,6 @@
 #!/bin/bash
 # ========================================
-# Универсальный скрипт базовой настройки VPS v2.12.3.9
+# Универсальный скрипт базовой настройки VPS v2.13.3.13
 # Поддерживаемые ОС: Debian/Ubuntu
 # Авторы в порядке вклада: ChatGPT, Grok, DeepSeek, Lumenoman
 #
@@ -202,8 +202,8 @@ section "Перезагрузка сервера"
 reboot_server() {
 if confirm "Перезагрузить сервер?"; then
 echo "Перезагрузка..."
-reboot
 clear
+reboot
 pause
 else
 echo "Отмена"
@@ -334,6 +334,7 @@ echo "Проверка конфигурации SSH..."
 if sshd -t; then
 echo "Перезапуск SSH..."
 systemctl restart ssh
+echo "Конфликты исправлены"
 add_success "Параметры SSH успешно настроены"
 save_env "SSH settings have been successfully configured"
 else
@@ -533,17 +534,19 @@ fi
 done
 add_success "BBR включен"
 save_env "BBR activated"
-read -rp "Отключить IPv6? [y/N]: " IPV6
-if [[ "$IPV6" =~ ^[Yy]$ ]]
-then
-cat >>/etc/sysctl.conf <<EOF
+IPv6
+
+IPv6() {
+section "Настройка IPv6"
+if confirm "Отключить IPv6?"; then
+cat >> /etc/sysctl.conf <<EOF
 net.ipv6.conf.all.disable_ipv6=1
 net.ipv6.conf.default.disable_ipv6=1
 EOF
 add_success "IPv6 отключен"
 save_env "IPv6 disabled"
 else
-add_warning "IPv6 остался активен..."
+add_warning "IPv6 остался активен"
 save_env "IPv6 enabled"
 fi
 echo "Чтение новых параметров sysctl.conf..."
@@ -632,6 +635,7 @@ configure_kernel
 configure_timezone
 configure_updates
 check_ssh_security
+show_info
 }
 
 # Main menu
@@ -648,6 +652,7 @@ declare -A ACTIONS=(
 [8]=configure_ufw
 [8a]=reset_ufw
 [9]=configure_kernel
+[9a]=IPv6
 [10]=configure_timezone
 [11]=configure_updates
 [12]=check_ssh_security
@@ -674,6 +679,7 @@ echo "7.  Настройка Fail2Ban"
 echo "8.  Настройка UFW"
 echo "8a. Сброс текущих настроек UFW"
 echo "9.  Настройка ядра (BBR/sysctl)"
+echo "9a. Настройка IPv6"
 echo "10. Установка часового пояса"
 echo "11. Активация автообновлений"
 echo "12. Проверка конфигурации"
