@@ -534,16 +534,14 @@ fi
 done
 add_success "BBR включен"
 save_env "BBR activated"
-#configure_IPv6
+configure_IPv6
 }
 
 configure_IPv6() {
 section "Настройка IPv6"
 if confirm "Отключить IPv6?"; then
-cat >> /etc/sysctl.conf <<EOF
-net.ipv6.conf.all.disable_ipv6=1
-net.ipv6.conf.default.disable_ipv6=1
-EOF
+echo "net.ipv6.conf.all.disable_ipv6=1" >> /etc/sysctl.conf
+echo "net.ipv6.conf.default.disable_ipv6=1" >> /etc/sysctl.conf
 add_success "IPv6 отключен"
 save_env "IPv6 disabled"
 else
