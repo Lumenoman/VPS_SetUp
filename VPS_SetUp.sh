@@ -534,9 +534,9 @@ fi
 done
 add_success "BBR включен"
 save_env "BBR activated"
-IPv6
+configure_IPv6
 
-IPv6() {
+configure_IPv6() {
 section "Настройка IPv6"
 if confirm "Отключить IPv6?"; then
 cat >> /etc/sysctl.conf <<EOF
@@ -652,7 +652,7 @@ declare -A ACTIONS=(
 [8]=configure_ufw
 [8a]=reset_ufw
 [9]=configure_kernel
-[9a]=IPv6
+[9a]=configure_IPv6
 [10]=configure_timezone
 [11]=configure_updates
 [12]=check_ssh_security
@@ -664,7 +664,7 @@ main_menu() {
 while true
 do
 clear
-echo "============== VPS_SetUp =============="
+echo "========= VPS_SetUp v2.13.3.13 ========="
 echo
 echo "1.  Полная настройка сервера"
 echo
