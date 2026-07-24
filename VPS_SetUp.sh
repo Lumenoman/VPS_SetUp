@@ -1,6 +1,6 @@
 #!/bin/bash
 # ========================================
-# Универсальный скрипт базовой настройки VPS v2.13.3.13
+# Универсальный скрипт базовой настройки VPS v2.14.3.17
 # Поддерживаемые ОС: Debian/Ubuntu
 # Авторы в порядке вклада: ChatGPT, Grok, DeepSeek, Lumenoman
 #
@@ -404,7 +404,12 @@ echo "Запись публичного ключа в файл..."
 mkdir -p ~/.ssh
 chmod 700 ~/.ssh
 echo "Активация публичного ключа..."
+if grep -Fxq "$PUBKEY" ~/.ssh/authorized_keys; then
+add_warning "Этот ключ уже существует"
+else
 echo "$PUBKEY" >> ~/.ssh/authorized_keys
+add_success "Публичный ключ добавлен"
+fi
 chmod 600 ~/.ssh/authorized_keys
 add_success "Ключи созданы"
 save_env "SSH keys ${KEYNAME:-id_ed25519} successfully activated"
@@ -600,11 +605,9 @@ return
 fi
 # Get real Fail2Ban port for jail sshd
 F2B_PORT=$(awk -F '=' '
-    /^[[:space:]]*port[[:space:]]*=/ {
-        gsub(/[[:space:]]/, "", $2)
-        print $2
-        exit
-    }
+/^[[:space:]]*port[[:space:]]*=/ {gsub(/[[:space:]]/, "", $2)
+print $2
+exit}
 ' /etc/fail2ban/jail.local)
 # Chek UFW port
 UFW_RULE=$(ufw status | grep -E "^${SSH_PORT}/tcp" || true)
@@ -622,6 +625,171 @@ add_success "SSH порт открыт в UFW"
 else
 add_failed "SSH порт не открыт в UFW"
 pause
+fi
+}
+
+true_info() {
+local SSH_PORT F2B_PORT UFW_RULE ROOT PUB PASS UPDATES
+source /etc/os-release
+echo "OS: $PRETTY_NAME Like $ID_LIKE"
+echo "Code name: $VERSION_CODENAME"
+HOSTNAME=$(hostname)
+echo "Hostname: $HOSTNAME"
+IP=$(curl -4 -fsSL ifconfig.me || echo "unknown")
+echo "IP: $IP"
+RAM=$(free -h | awk '/^Mem:/ {print $2}')
+echo "RAM: $RAM"
+echo "Created: $(date)"
+TIMEZONE=$(timedatectl show -p Timezone --value)
+echo "Timezone: $TIMEZONE"
+if [[ -z "${NEW_PASS:-}" ]]; then
+echo "Root password not set in this session"
+else
+echo "Root password: ${NEW_PASS:-}"
+fi
+if command -v sshd &>/dev/null; then
+echo "OpenSSH server is present"
+else
+echo "OpenSSH server is not installed"
+echo "Please install it first"
+pause
+fi
+if [[ -f /var/run/reboot-required ]]; then
+echo "The server needs a reboot"
+else
+echo "Reboot not required"
+fi
+if ! sshd -t; then
+echo "SSH configuration is invalid"
+else
+echo "SSH configuration is valid"
+fi
+ROOT=$(sshd -T | awk '/permitrootlogin/{print $2}')
+PUB=$(sshd -T | awk '/pubkeyauthentication/{print $2}')
+PASS=$(sshd -T | awk '/passwordauthentication/{print $2}')
+echo "PermitRootLogin $ROOT"
+echo "PubkeyAuthentication $PUB"
+echo "PasswordAuthentication $PASS"
+if [[ "$ROOT" == "prohibit-password" || "$ROOT" == "without-password" ]] &&
+[[ "$PUB" == yes ]] &&
+[[ "$PASS" == no ]]; then
+echo "SSH configured successfully"
+echo "Root can login only using SSH key"
+fi
+if [[ -f ~/.ssh/authorized_keys ]]; then
+echo "File 'authorized_keys' present"
+else
+echo "File 'authorized_keys' not present"
+fi
+if [[ -z "${XPORT:-}" ]]; then
+echo "Addons port not set in this session"
+else
+echo "Addons port: ${XPORT}"
+fi
+if apt-get update -qq; then
+echo "Package lists updated"
+else
+echo "Failed to update package lists"
+fi
+
+UPDATES=$(apt-get -s upgrade | awk '/^Inst / {count++} END {print count+0}')
+if (( UPDATES > 0 )); then
+echo "Updates available: $UPDATES"
+else
+echo "System is up to date"
+fi
+PACKAGES=(
+curl
+wget
+git
+nano
+mc
+htop
+btop
+jq
+dnsutils
+net-tools
+ca-certificates
+gnupg
+lsb-release
+golang-go
+certbot
+chrony
+ufw
+fail2ban
+unattended-upgrades
+)
+MISSING=()
+for PACKAGE in "${PACKAGES[@]}"; do
+if ! dpkg -s "$PACKAGE" &>/dev/null; then
+MISSING+=("$PACKAGE")
+fi
+done
+if (( ${#MISSING[@]} == 0 )); then
+echo "All necessary packages are installed"
+else
+echo "Missing packages:"
+printf '   %s\n' "${MISSING[@]}"
+fi
+if systemctl is-active --quiet fail2ban; then
+echo "Fail2Ban is active"
+else
+echo "Fail2Ban not active"
+fi
+if ufw status | grep -q active
+then
+echo "UFW is active"
+ufw status verbose
+else
+echo "UFW not active"
+ufw status verbose
+fi
+if [[ "$(sysctl -n net.ipv4.tcp_congestion_control)" == "bbr" ]]; then
+echo "BBR is on"
+else
+echo "BBR is off"
+fi
+if [[ "$(sysctl -n net.ipv6.conf.all.disable_ipv6)" == "1" ]] &&
+[[ "$(sysctl -n net.ipv6.conf.default.disable_ipv6)" == "1" ]]; then
+echo "IPv6 is off"
+else
+echo "IPv6 is on"
+fi
+if systemctl is-active --quiet unattended-upgrades
+then
+echo "Unattended Upgrades successfully activated"
+else
+echo "Unattended Upgrades not active"
+fi
+# Get real SSH port
+SSH_PORT=$(sshd -T | awk '$1 == "port" {print $2; exit}')
+if [[ -z "$SSH_PORT" ]]; then
+echo "SSH port not detected"
+fi
+# Get real Fail2Ban port for jail sshd
+if [[ -f /etc/fail2ban/jail.local ]]; then
+F2B_PORT=$(awk -F '=' '
+/^[[:space:]]*port[[:space:]]*=/ {gsub(/[[:space:]]/, "", $2)
+print $2
+exit}
+' /etc/fail2ban/jail.local)
+else
+F2B_PORT="not configured"
+fi
+# Check UFW port
+UFW_RULE=$(ufw status | grep -E "^${SSH_PORT}/tcp" || true)
+echo "SSH port:       $SSH_PORT"
+echo "Fail2Ban port:  $F2B_PORT"
+echo "UFW rule:       $UFW_RULE"
+if [[ "$F2B_PORT" == "ssh" || "$F2B_PORT" == "sshd" || "$SSH_PORT" == "$F2B_PORT" ]]; then
+echo "SSH and Fail2Ban ports match"
+else
+echo "SSH and Fail2Ban ports do not match"
+fi
+if [[ -n "$UFW_RULE" ]]; then
+echo "SSH port is open in UFW"
+else
+echo "SSH port not open in UFW"
 fi
 }
 
@@ -660,7 +828,8 @@ declare -A ACTIONS=(
 [11]=configure_updates
 [12]=check_ssh_security
 [13]=show_info
-[14]=reboot_server
+[14]=true_info
+[15]=reboot_server
 )
 
 main_menu() {
@@ -686,8 +855,9 @@ echo "9a. Настройка IPv6"
 echo "10. Установка часового пояса"
 echo "11. Активация автообновлений"
 echo "12. Проверка конфигурации"
-echo "13. Показать информацию о сервере"
-echo "14. Перезагрузить сервер"
+echo "13. Показать выполненные изменения"
+echo "14. Показать текущую конфигурацию"
+echo "15. Перезагрузить сервер"
 echo
 echo "0. Выход"
 echo
