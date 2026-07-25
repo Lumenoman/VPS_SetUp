@@ -204,7 +204,6 @@ cat "$ENV_FILE"
 # End caps / Plugs
 update_script() {
 section "Обновление скрипта"
-update_script() {
 local CURRENT_VERSION="$VERSION"
 local REMOTE_VERSION
 local SCRIPT_URL
