@@ -209,7 +209,7 @@ local REMOTE_VERSION
 local SCRIPT_URL
 local SCRIPT_PATH
 local TEMP_FILE
-SCRIPT_URL="https://raw.githubusercontent.com/Lumenoman/VPS_SetUp/main/VPSSetUp.sh"
+SCRIPT_URL="https://raw.githubusercontent.com/Lumenoman/VPS_SetUp/main/VPS_SetUp.sh"
 SCRIPT_PATH="/usr/local/bin/VPS_SetUp/VPS_SetUp.sh"
 echo "Проверка обновлений..."
 TEMP_FILE=$(mktemp)
