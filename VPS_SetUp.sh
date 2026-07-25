@@ -1,6 +1,6 @@
 #!/bin/bash
 # ========================================
-# Универсальный скрипт базовой настройки VPS v2.14.3.17
+# Универсальный скрипт базовой настройки VPS
 # Поддерживаемые ОС: Debian/Ubuntu
 # Авторы в порядке вклада: ChatGPT, Grok, DeepSeek, Lumenoman
 #
@@ -16,6 +16,9 @@
 
 clear
 echo "Начинаем..."
+
+# Version
+VERSION="2.15.4.18"
 
 # Global massive
 echo "Создание массива для отчетов..."
@@ -185,6 +188,7 @@ echo "OS: $OS_INFO Like $ID_LIKE"
 echo "RAM: $RAM"
 echo "Hostname: $HOSTNAME"
 echo "IP: $IP"
+echo "Script version: $VERSION"
 echo "Created: $(date)"
 echo
 } > "$ENV_FILE"
@@ -198,8 +202,56 @@ cat "$ENV_FILE"
 }
 
 # End caps / Plugs
-section "Перезагрузка сервера"
+update_script() {
+section "Обновление скрипта"
+update_script() {
+local CURRENT_VERSION="$VERSION"
+local REMOTE_VERSION
+local SCRIPT_URL
+local SCRIPT_PATH
+local TEMP_FILE
+SCRIPT_URL="https://raw.githubusercontent.com/Lumenoman/VPS_SetUp/main/VPSSetUp.sh"
+SCRIPT_PATH="/usr/local/bin/VPS_SetUp/VPS_SetUp.sh"
+echo "Проверка обновлений..."
+TEMP_FILE=$(mktemp)
+if ! curl -fsSL "$SCRIPT_URL" -o "$TEMP_FILE"; then
+echo "✗ Не удалось получить информацию о новой версии"
+echo "Попробуйте повторить обновление"
+rm -f "$TEMP_FILE"
+return 1
+fi
+REMOTE_VERSION=$(grep -m1 '^VERSION=' "$TEMP_FILE" | cut -d'"' -f2)
+if [[ -z "$REMOTE_VERSION" ]]; then
+echo "✗ Не удалось определить версию из источника оновлений"
+echo "Попробуйте повторить обновление"
+rm -f "$TEMP_FILE"
+return 1
+fi
+if [[ "$CURRENT_VERSION" == "$REMOTE_VERSION" ]]; then
+echo "✓ Последняя версия v$CURRENT_VERSION уже установлена"
+rm -f "$TEMP_FILE"
+return 0
+fi
+echo "Текущая версия:    $CURRENT_VERSION"
+echo "Доступная версия:  $REMOTE_VERSION"
+if ! confirm "Обновить VPSSetUp?"; then
+rm -f "$TEMP_FILE"
+return
+fi
+if ! bash -n "$TEMP_FILE"; then
+echo "✗ Новая версия содержит синтаксическую ошибку"
+echo "Попробуйте повторить обновление"
+rm -f "$TEMP_FILE"
+return 1
+fi
+chmod +x "$TEMP_FILE"
+mv "$TEMP_FILE" "$SCRIPT_PATH"
+echo "✓ VPSSetUp успешно обновлен до версии v$REMOTE_VERSION"
+echo "Перезапустите скрипт!"
+}
+
 reboot_server() {
+section "Перезагрузка сервера"
 if confirm "Перезагрузить сервер?"; then
 echo "Перезагрузка..."
 clear
@@ -631,6 +683,7 @@ fi
 true_info() {
 local SSH_PORT F2B_PORT UFW_RULE ROOT PUB PASS UPDATES
 source /etc/os-release
+echo "Script version: $VERSION"
 echo "OS: $PRETTY_NAME Like $ID_LIKE"
 echo "Code name: $VERSION_CODENAME"
 HOSTNAME=$(hostname)
@@ -691,7 +744,6 @@ echo "Package lists updated"
 else
 echo "Failed to update package lists"
 fi
-
 UPDATES=$(apt-get -s upgrade | awk '/^Inst / {count++} END {print count+0}')
 if (( UPDATES > 0 )); then
 echo "Updates available: $UPDATES"
@@ -829,14 +881,15 @@ declare -A ACTIONS=(
 [12]=check_ssh_security
 [13]=show_info
 [14]=true_info
-[15]=reboot_server
+[15]=update_script
+[16]=reboot_server
 )
 
 main_menu() {
 while true
 do
 clear
-echo "========= VPS_SetUp v2.13.3.13 ========="
+echo "========= VPS_SetUp v$VERSION ========="
 echo
 echo "1.  Полная настройка сервера"
 echo
@@ -857,7 +910,8 @@ echo "11. Активация автообновлений"
 echo "12. Проверка конфигурации"
 echo "13. Показать выполненные изменения"
 echo "14. Показать текущую конфигурацию"
-echo "15. Перезагрузить сервер"
+echo "15. Обновить скрипт"
+echo "16. Перезагрузить сервер"
 echo
 echo "0. Выход"
 echo
