@@ -17,8 +17,8 @@
 clear
 echo "Начинаем..."
 
-# Version
-VERSION="2.15.4.18"
+# Script Version
+SVERSION="2.15.4.18"
 
 # Global massive
 echo "Создание массива для отчетов..."
@@ -188,7 +188,7 @@ echo "OS: $OS_INFO Like $ID_LIKE"
 echo "RAM: $RAM"
 echo "Hostname: $HOSTNAME"
 echo "IP: $IP"
-echo "Script version: $VERSION"
+echo "Script version: $SVERSION"
 echo "Created: $(date)"
 echo
 } > "$ENV_FILE"
@@ -204,7 +204,7 @@ cat "$ENV_FILE"
 # End caps / Plugs
 update_script() {
 section "Обновление скрипта"
-local CURRENT_VERSION="$VERSION"
+local CURRENT_VERSION="$SVERSION"
 local REMOTE_VERSION
 local SCRIPT_URL
 local SCRIPT_PATH
@@ -219,7 +219,7 @@ echo "Попробуйте повторить обновление"
 rm -f "$TEMP_FILE"
 return 1
 fi
-REMOTE_VERSION=$(grep -m1 '^VERSION=' "$TEMP_FILE" | cut -d'"' -f2)
+REMOTE_VERSION=$(grep -m1 '^SVERSION=' "$TEMP_FILE" | cut -d'"' -f2)
 if [[ -z "$REMOTE_VERSION" ]]; then
 echo "✗ Не удалось определить версию из источника оновлений"
 echo "Попробуйте повторить обновление"
@@ -682,7 +682,7 @@ fi
 true_info() {
 local SSH_PORT F2B_PORT UFW_RULE ROOT PUB PASS UPDATES
 source /etc/os-release
-echo "Script version: $VERSION"
+echo "Script version: $SVERSION"
 echo "OS: $PRETTY_NAME Like $ID_LIKE"
 echo "Code name: $VERSION_CODENAME"
 HOSTNAME=$(hostname)
@@ -888,7 +888,7 @@ main_menu() {
 while true
 do
 clear
-echo "========= VPS_SetUp v$VERSION ========="
+echo "========= VPS_SetUp v$SVERSION ========="
 echo
 echo "1.  Полная настройка сервера"
 echo
