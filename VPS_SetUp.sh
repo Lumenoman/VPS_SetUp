@@ -221,7 +221,7 @@ return 1
 fi
 REMOTE_VERSION=$(grep -m1 '^SVERSION=' "$TEMP_FILE" | cut -d'"' -f2)
 if [[ -z "$REMOTE_VERSION" ]]; then
-echo "✗ Не удалось определить версию из источника оновлений"
+echo "✗ Не удалось определить версию из источника обновлений"
 echo "Попробуйте повторить обновление"
 rm -f "$TEMP_FILE"
 return 1
@@ -231,8 +231,14 @@ echo "✓ Последняя версия v$CURRENT_VERSION уже устано�
 rm -f "$TEMP_FILE"
 return 0
 fi
-echo "Текущая версия:    $CURRENT_VERSION"
-echo "Доступная версия:  $REMOTE_VERSION"
+if [[ "$(printf '%s\n' "$CURRENT_VERSION" "$REMOTE_VERSION" | sort -V | head -n1)" == "$REMOTE_VERSION" ]]; then
+echo "⚠ Уже установлена более новая версия: v$CURRENT_VERSION"
+echo "Источник обновлений содержит версию: v$REMOTE_VERSION"
+rm -f "$TEMP_FILE"
+return 0
+fi
+echo "Текущая версия: v$CURRENT_VERSION"
+echo "Доступная версия: v$REMOTE_VERSION"
 if ! confirm "Обновить VPSSetUp?"; then
 rm -f "$TEMP_FILE"
 return
