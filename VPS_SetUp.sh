@@ -18,7 +18,7 @@ clear
 echo "Начинаем..."
 
 # Script Version
-SVERSION="2.15.4.18"
+SVERSION="2.16.4.18"
 
 # Global massive
 echo "Создание массива для отчетов..."
@@ -941,6 +941,335 @@ read -n1 -rsp "Нажмите любую клавишу для возврата 
 done
 }
 
+TUI_menu() {
+local SELECTED=0
+local KEY
+local MENU_ITEMS=(
+"Полная настройка сервера"
+"Смена пароля root"
+"Обновление системы"
+"Установка часто используемых пакетов"
+"Настройка F2B/Time/UU"
+"Настройка параметров SSH"
+"Настройка UFW"
+"Настройка ядра"
+"Проверки"
+"Обновить скрипт"
+"Перезагрузить сервер"
+"Выход"
+)
+while true; do
+clear
+echo "========= VPS_SetUp v$SVERSION ========="
+for ((i=0; i<${#MENU_ITEMS[@]}; i++)); do
+if (( i == SELECTED )); then
+echo -e "\e[7m> ${MENU_ITEMS[$i]}\e[0m"
+else
+echo "  ${MENU_ITEMS[$i]}"
+fi
+done
+echo
+echo "↑↓ - Навигация   Enter - Выбор   Q - Выход"
+read -rsn1 KEY
+case "$KEY" in
+$'\x1b')
+read -rsn2 KEY
+case "$KEY" in
+'[A')
+((SELECTED--))
+;;
+'[B')
+((SELECTED++))
+;;
+esac
+;;
+'')
+case "$SELECTED" in
+0) full_setup ;;
+1) change_root_password ;;
+2) update_system ;;
+3) install_packages ;;
+4) utils_menu ;;
+5) ssh_menu ;;
+6) ufw_menu ;;
+7) kernel_menu ;;
+8) test_menu ;;
+9) update_script ;;
+10) reboot_server ;;
+11) exit 0 ;;
+esac
+;;
+q|Q)
+exit 0
+;;
+esac
+(( SELECTED < 0 )) && SELECTED=$((${#MENU_ITEMS[@]} - 1))
+(( SELECTED >= ${#MENU_ITEMS[@]} )) && SELECTED=0
+done
+}
+
+utils_menu() {
+local SELECTED=0
+local KEY
+local MENU_ITEMS=(
+"Настройка Fail2Ban"
+"Установка часового пояса"
+"Активация автообновлений"
+"Назад"
+)
+while true; do
+clear
+echo "======== Настройка  F2B/Time/UU ========"
+for ((i=0; i<${#MENU_ITEMS[@]}; i++)); do
+if (( i == SELECTED )); then
+echo -e "\e[7m> ${MENU_ITEMS[$i]}\e[0m"
+else
+echo "  ${MENU_ITEMS[$i]}"
+fi
+done
+read -rsn1 KEY
+case "$KEY" in
+$'\x1b')
+read -rsn2 KEY
+case "$KEY" in
+'[A')
+((SELECTED--))
+;;
+'[B')
+((SELECTED++))
+;;
+esac
+;;
+'')
+case "$SELECTED" in
+0) configure_fail2ban ;;
+1) configure_timezone ;;
+2) configure_updates ;;
+3) return ;;
+esac
+;;
+q|Q)
+return
+;;
+esac
+(( SELECTED < 0 )) &&
+SELECTED=$((${#MENU_ITEMS[@]} - 1))
+(( SELECTED >= ${#MENU_ITEMS[@]} )) &&
+SELECTED=0
+done
+}
+
+ssh_menu() {
+local SELECTED=0
+local KEY
+local MENU_ITEMS=(
+"Полная настройка SSH"
+"Задать порты"
+"Ужесточение параметров SSH"
+"Установка SSH-ключей"
+"Назад"
+)
+while true; do
+clear
+echo "======= Настройка параметров SSH ======="
+for ((i=0; i<${#MENU_ITEMS[@]}; i++)); do
+if (( i == SELECTED )); then
+echo -e "\e[7m> ${MENU_ITEMS[$i]}\e[0m"
+else
+echo "  ${MENU_ITEMS[$i]}"
+fi
+done
+read -rsn1 KEY
+case "$KEY" in
+$'\x1b')
+read -rsn2 KEY
+case "$KEY" in
+'[A')
+((SELECTED--))
+;;
+'[B')
+((SELECTED++))
+;;
+esac
+;;
+'')
+case "$SELECTED" in
+0) configure_ssh ;;
+1) read_ports ;;
+2) harden_ssh ;;
+3) configure_ssh_keys ;;
+4) return ;;
+esac
+;;
+q|Q)
+return
+;;
+esac
+(( SELECTED < 0 )) &&
+SELECTED=$((${#MENU_ITEMS[@]} - 1))
+(( SELECTED >= ${#MENU_ITEMS[@]} )) &&
+SELECTED=0
+done
+}
+
+ufw_menu() {
+local SELECTED=0
+local KEY
+local MENU_ITEMS=(
+"Включение UFW"
+"Сброс текущих настроек UFW"
+"Назад"
+)
+while true; do
+clear
+echo "============ Настройка  UFW ============"
+for ((i=0; i<${#MENU_ITEMS[@]}; i++)); do
+if (( i == SELECTED )); then
+echo -e "\e[7m> ${MENU_ITEMS[$i]}\e[0m"
+else
+echo "  ${MENU_ITEMS[$i]}"
+fi
+done
+read -rsn1 KEY
+case "$KEY" in
+$'\x1b')
+read -rsn2 KEY
+case "$KEY" in
+'[A')
+((SELECTED--))
+;;
+'[B')
+((SELECTED++))
+;;
+esac
+;;
+'')
+case "$SELECTED" in
+0) configure_ufw ;;
+1) reset_ufw ;;
+2) return ;;
+esac
+;;
+q|Q)
+return
+;;
+esac
+(( SELECTED < 0 )) &&
+SELECTED=$((${#MENU_ITEMS[@]} - 1))
+(( SELECTED >= ${#MENU_ITEMS[@]} )) &&
+SELECTED=0
+done
+}
+
+kernel_menu() {
+local SELECTED=0
+local KEY
+local MENU_ITEMS=(
+"Настройка (BBR/sysctl)"
+"Настройка IPv6"
+"Назад"
+)
+while true; do
+clear
+echo "============ Настройка ядра ============"
+for ((i=0; i<${#MENU_ITEMS[@]}; i++)); do
+if (( i == SELECTED )); then
+echo -e "\e[7m> ${MENU_ITEMS[$i]}\e[0m"
+else
+echo "  ${MENU_ITEMS[$i]}"
+fi
+done
+read -rsn1 KEY
+case "$KEY" in
+$'\x1b')
+read -rsn2 KEY
+case "$KEY" in
+'[A')
+((SELECTED--))
+;;
+'[B')
+((SELECTED++))
+;;
+esac
+;;
+'')
+case "$SELECTED" in
+0) configure_kernel ;;
+1) configure_IPv6 ;;
+2) return ;;
+esac
+;;
+q|Q)
+return
+;;
+esac
+(( SELECTED < 0 )) &&
+SELECTED=$((${#MENU_ITEMS[@]} - 1))
+(( SELECTED >= ${#MENU_ITEMS[@]} )) &&
+SELECTED=0
+done
+}
+
+test_menu() {
+local SELECTED=0
+local KEY
+local MENU_ITEMS=(
+"Проверка конфигурации портов"
+"Показать изменения этой сессии"
+"Показать текущую конфигурацию"
+"Назад"
+)
+while true; do
+clear
+echo "=============== Проверки ==============="
+for ((i=0; i<${#MENU_ITEMS[@]}; i++)); do
+if (( i == SELECTED )); then
+echo -e "\e[7m> ${MENU_ITEMS[$i]}\e[0m"
+else
+echo "  ${MENU_ITEMS[$i]}"
+fi
+done
+read -rsn1 KEY
+case "$KEY" in
+$'\x1b')
+read -rsn2 KEY
+case "$KEY" in
+'[A')
+((SELECTED--))
+;;
+'[B')
+((SELECTED++))
+;;
+esac
+;;
+'')
+case "$SELECTED" in
+0) check_ssh_security ;;
+1) show_info ;;
+2) true_info ;;
+3) return ;;
+esac
+;;
+q|Q)
+return
+;;
+esac
+(( SELECTED < 0 )) &&
+SELECTED=$((${#MENU_ITEMS[@]} - 1))
+(( SELECTED >= ${#MENU_ITEMS[@]} )) &&
+SELECTED=0
+done
+}
+
+menu_choice() {
+section "Выбор типа меню"
+if confirm "Использовать TUI?"; then
+TUI_menu
+else
+main_menu
+fi
+}
+
 # Start scripts
 init_server_env
-main_menu
+menu_choice
