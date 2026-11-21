@@ -155,7 +155,7 @@ return
 fi
 echo "Задаем дополнительный порт XPort для будщих сервисов..."
 read -rp "Введите XPort, или нажмите Enter для 2442: " XPORT
-XPORT=${XPORT_INPUT:-2442}
+XPORT=${XPORT:-2442}
 while ! [[ "$XPORT" =~ ^[0-9]+$ ]] || \
 (( XPORT < 1 || XPORT > 65535 )) || \
 (( XPORT == NPORT )) || \
