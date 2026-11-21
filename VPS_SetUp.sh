@@ -18,7 +18,7 @@ clear
 echo "Начинаем..."
 
 # Script Version
-SVERSION="2.16.5.18"
+SVERSION="2.16.5.19"
 
 # Global massive
 echo "Создание массива для отчетов..."
@@ -256,6 +256,7 @@ echo "Перезапустите скрипт!"
 }
 
 reboot_server() {
+clear
 section "Перезагрузка сервера"
 if confirm "Перезагрузить сервер?"; then
 echo "Перезагрузка..."
