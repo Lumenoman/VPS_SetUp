@@ -18,7 +18,7 @@ clear
 echo "Начинаем..."
 
 # Script Version
-SVERSION="2.16.4.18"
+SVERSION="2.16.5.18"
 
 # Global massive
 echo "Создание массива для отчетов..."
